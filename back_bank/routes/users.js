@@ -2,10 +2,10 @@ const router = require('express').Router();
 const setup = require('../db_setup');
 const sha = require('sha256');
 
-const { mongodb, mysqldb } = setup();
 /// 회원가입처리
-router.post('/users/insertMember', function (req, res) {
+router.post('/users/insertMember', async function (req, res) {
     console.log(req.body)
+    const { mongodb, mysqldb } = await setup();
     mongodb
     .collection("user")
     .findOne({ id: req.body.id })
