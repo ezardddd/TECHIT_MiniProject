@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import './SignUp.css';
+import axios from 'axios'; // axios 설치 필요: npm install axios
 
 function SignUp() {
   const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-    confirmPassword: '',
-    securityQuestion: '',
-    securityAnswer: ''
+    id: '',
+    pw: '',
+    name: '',
+    email: '',
   });
+
+  const [message, setMessage] = useState('');
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -18,71 +20,66 @@ function SignUp() {
     }));
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // 여기에 회원가입 로직을 구현하세요
-    console.log('회원가입 데이터:', formData);
+    try {
+      const response = await axios.post('/users/insertMember', formData);
+      setMessage(response.data.msg);
+      if (response.data.msg === "회원 가입 되셨습니다") {
+        // 회원가입 성공 시 처리 (예: 로그인 페이지로 리다이렉트)
+        console.log("회원가입 성공");
+      }
+    } catch (error) {
+      setMessage("서버 오류가 발생했습니다.");
+      console.error("회원가입 오류", error);
+    }
   };
 
   return (
     <div className="signup-container">
       <h2>회원가입</h2>
+      {message && <div className="message">{message}</div>}
       <form onSubmit={handleSubmit} className="signup-form">
         <div className="form-group">
-          <label htmlFor="username">아이디</label>
+          <label htmlFor="id">아이디</label>
           <input
             type="text"
-            id="username"
-            name="username"
-            value={formData.username}
+            id="id"
+            name="id"
+            value={formData.id}
             onChange={handleChange}
             required
           />
         </div>
         <div className="form-group">
-          <label htmlFor="password">비밀번호</label>
+          <label htmlFor="pw">비밀번호</label>
           <input
             type="password"
-            id="password"
-            name="password"
-            value={formData.password}
+            id="pw"
+            name="pw"
+            value={formData.pw}
             onChange={handleChange}
             required
           />
         </div>
         <div className="form-group">
-          <label htmlFor="confirmPassword">비밀번호 재확인</label>
-          <input
-            type="password"
-            id="confirmPassword"
-            name="confirmPassword"
-            value={formData.confirmPassword}
-            onChange={handleChange}
-            required
-          />
-        </div>
-        <div className="form-group">
-          <label htmlFor="securityQuestion">본인확인 질문</label>
-          <select
-            id="securityQuestion"
-            name="securityQuestion"
-            value={formData.securityQuestion}
-            onChange={handleChange}
-            required
-          >
-            <option value="">질문을 선택하세요</option>
-            <option value="birthPlace">어린 시절 지내던 곳은?</option>
-            <option value="firstPet">첫 반려동물의 이름은?</option>
-            <option value="any">그냥아무질문</option>
-          </select>
-        </div>
-        <div className="form-group">
-          <label htmlFor="securityAnswer">답변</label>
+          <label htmlFor="name">이름</label>
           <input
             type="text"
-            id="securityAnswer"
-            name="securityAnswer"
-            value={formData.securityAnswer}
+            id="name"
+            name="name"
+            value={formData.name}
+            onChange={handleChange}
+            required
+          />
+        </div>
+        <div className="form-group">
+          <label htmlFor="email">이메일</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            value={formData.email}
             onChange={handleChange}
             required
           />
