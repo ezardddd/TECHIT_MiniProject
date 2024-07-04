@@ -2,7 +2,6 @@ const router = require('express').Router();
 const setup = require('../db_setup');
 const sha = require('sha256');
 
-/// 회원가입처리
 router.post('/users/insertMember', async function (req, res) {
     console.log(req.body)
     const { mongodb, mysqldb } = await setup();
@@ -29,6 +28,8 @@ router.post('/users/insertMember', async function (req, res) {
             pw: req.body.pw,
             name: req.body.name,
             email: req.body.email,
+            securityQuestion: req.body.securityQuestion,
+            securityAnswer: req.body.securityAnswer,
             register_date: new Date(),
           })
           .then((result) => {
@@ -39,14 +40,15 @@ router.post('/users/insertMember', async function (req, res) {
                 (err,rows,fields) => {
                   if(err){
                     console.log(err);
+                    res.json({ msg: "회원 가입 실패 : 서버 오류" });
                   }else{
                     console.log('salt 저장 성공');
+                    res.json({ msg: "회원 가입 되셨습니다" });
                   }
                 });
-                res.json({ msg: "회원 가입 되셨습니다" })
             } else {
               console.log("회원가입 fail");
-              res.json({ msg: "회원 가입 실패" }); 
+              res.json({ msg: "회원 가입 실패" });
             }
           })
           .catch((err) => {
@@ -58,8 +60,6 @@ router.post('/users/insertMember', async function (req, res) {
     .catch((err) => {
         res.json({ msg: "회원 가입 실패 : 서버 오류" });
     });
-    
 });
-
 
 module.exports = router;
