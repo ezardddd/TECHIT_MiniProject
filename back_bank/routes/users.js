@@ -13,6 +13,15 @@ router.post('/users/insertMember', async function (req, res) {
       if (result) {
         res.json({ msg: "가입 실패 : 중복된 아이디입니다" });
       } else {
+        const generateSalt = (length = 16) => {
+          const crypto = require('crypto');
+          return crypto.randomBytes(length).toString('hex');
+        };
+
+        const salt = generateSalt();
+        console.log(req.body);
+        //password 암호화
+        req.body.pw = sha(req.body.pw + salt);
         mongodb
           .collection("user")
           .insertOne({
@@ -23,9 +32,22 @@ router.post('/users/insertMember', async function (req, res) {
             register_date: new Date(),
           })
           .then((result) => {
-            //console.log(result)
-            console.log("회원 가입 성공");
-            res.json({ msg: "회원 가입 되셨습니다" });
+            if(result) {
+              console.log("회원가입 성공");
+              const sql = `insert into usersalt(userid, salt) values(?,?)`
+              mysqldb.query(sql, [req.body.id, salt],
+                (err,rows,fields) => {
+                  if(err){
+                    console.log(err);
+                  }else{
+                    console.log('salt 저장 성공');
+                  }
+                });
+                res.json({ msg: "회원 가입 되셨습니다" })
+            } else {
+              console.log("회원가입 fail");
+              res.json({ msg: "회원 가입 실패" }); 
+            }
           })
           .catch((err) => {
             console.log(err);

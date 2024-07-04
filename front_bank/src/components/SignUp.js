@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import './SignUp.css';
 import axios from 'axios'; // axios 설치 필요: npm install axios
 
 function SignUp() {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     id: '',
     pw: '',
@@ -26,8 +28,8 @@ function SignUp() {
       const response = await axios.post('/users/insertMember', formData);
       setMessage(response.data.msg);
       if (response.data.msg === "회원 가입 되셨습니다") {
-        // 회원가입 성공 시 처리 (예: 로그인 페이지로 리다이렉트)
         console.log("회원가입 성공");
+        navigate('/');
       }
     } catch (error) {
       setMessage("서버 오류가 발생했습니다.");
