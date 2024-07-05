@@ -24,9 +24,9 @@ router.post('/users/insertMember', async function (req, res) {
         mongodb
           .collection("user")
           .insertOne({
-            id: req.body.id,
-            pw: req.body.pw,
-            name: req.body.name,
+            userid: req.body.id,
+            userpw: req.body.pw,
+            username: req.body.name,
             email: req.body.email,
             securityQuestion: req.body.securityQuestion,
             securityAnswer: req.body.securityAnswer,
