@@ -3,8 +3,10 @@ const setup = require('../db_setup');
 const sha = require('sha256');
 const { MongoClient } = require('mongodb');
 const jwt = require('jsonwebtoken');
+const e = require('express');
 const { mongodb, mysqldb } = setup();
-
+const express = require('express');
+ac.use(express.json());
 
 const ACCESS_TOKEN_SECRET = process.env.ACCESS_TOKEN_SECRET;
 const REFRESH_TOKEN_SECRET = process.env.REFRESH_TOKEN_SECRET;
@@ -48,7 +50,7 @@ ac.post('/makeAccount',authenticateToken, async(req, res)=>{
 
 //계정 조회
 //개인의 여러 계정을 조회
-ac.get('/getAccounts',async(req, res)=>{
+ac.get('/getAccounts',authenticateToken,async(req, res)=>{
     //인증 코드 필요
     const { mongodb, mysqldb } = await setup();
     let rows = mysqldb.query('select * from Account where userid = ?',[req.user.userid],(err, rows, fields)=>{
