@@ -14,7 +14,7 @@ const options = {
 
 
 // app.use('/', require('./routes/posts')); // 펀딩 게시물 관련
-// app.use('/', require('./routes/accounts')); // 계좌, 이체 관련
+app.use('/', require('./routes/accounts')); // 계좌, 이체 관련
 
 
 app.use(express.json());
