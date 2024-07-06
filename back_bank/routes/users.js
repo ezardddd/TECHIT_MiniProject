@@ -89,14 +89,15 @@ router.post('/users/login', async (req, res) => {
       const hashedPassword = sha(userpw + salt);
 
       if (hashedPassword === user.userpw) {
-        const accessToken = jwt.sign({ userid: user.userid, role: user.role });
+        const accessToken = jwt.sign(user);
         const refreshToken = jwt.refresh();
+        const currentTime = new Date();
 
-        await mongodb.collection("refreshTokens").insertOne({
-          userId: user.userid,
-          token: refreshToken,
-          createdAt: new Date()
-        });
+        await mongodb.collection("refreshTokens").updateOne(
+          { userid: user.userid },
+          { $set: { token: refreshToken, createdAt: currentTime } },
+          { upsert: true }
+        );
 
         res.json({
           msg: "로그인 성공",
@@ -134,7 +135,7 @@ router.get('/users/me', authJWT, async (req, res) => {
   }
 });
 
-router.get('/users/refresh', refresh);
+router.post('/users/refresh', refresh);
 
 router.post('/users/logout', async (req, res) => {
   const { refreshToken } = req.body;

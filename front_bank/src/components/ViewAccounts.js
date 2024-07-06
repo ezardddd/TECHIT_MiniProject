@@ -14,7 +14,7 @@ function ViewAccounts() {
             const response = await axios.get('/getAccounts');
             setAccounts(response.data);
         }catch(err){
-            console.err('계좌 조회 오류', err);
+            console.error('계좌 조회 오류', err);
         }
     };
 

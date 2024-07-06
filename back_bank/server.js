@@ -24,14 +24,15 @@ const cors = require('cors')
 const corsOptions = {
   origin: 'https://localhost:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  allowedHeaders: ['Content-Type', 'Authorization', 'Refresh'],
+  credentials: true
 }
 app.use(cors(corsOptions))
 
 app.get('/', (req, res) => {
     res.send('Hello World!');
   });
-  app.use('/', require('./routes/users')); //로그인 & 보안-인증 관련
+app.use('/', require('./routes/users')); //로그인 & 보안-인증 관련
 
 
 https.createServer(options, app).listen(process.env.WEB_PORT, async () => {

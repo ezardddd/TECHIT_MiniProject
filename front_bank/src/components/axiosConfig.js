@@ -1,7 +1,8 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: 'https://localhost:3000', // 백엔드 서버 URL
+  baseURL: 'https://localhost:3000',
+  withCredentials: true
 });
 
 instance.interceptors.request.use(
@@ -25,14 +26,24 @@ instance.interceptors.response.use(
       originalRequest._retry = true;
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post('/users/refresh', { refreshToken });
-        localStorage.setItem('accessToken', response.data.accessToken);
-        originalRequest.headers['Authorization'] = `Bearer ${response.data.accessToken}`;
+        const response = await axios.post('https://localhost:443/users/refresh', {}, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Refresh': refreshToken
+          }
+        });
+        
+        const { accessToken, refreshToken: newRefreshToken } = response.data.data;
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', newRefreshToken);
+        
+        originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
         return instance(originalRequest);
       } catch (err) {
+        console.error('토큰 갱신 실패:', err);
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/';
+        window.location.href = '/login';
         return Promise.reject(err);
       }
     }
