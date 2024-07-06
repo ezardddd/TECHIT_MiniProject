@@ -1,86 +1,59 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Navbar.css';
-import axios from './axiosConfig';
+import axios from './axiosConfig';  // 경로를 상대 경로로 수정
 
 function Navbar() {
-  const [loginData, setLoginData] = useState({
-    userid: '',
-    userpw: ''
-  });
-  const [loginStatus, setLoginStatus] = useState(null);
+  const [loginData, setLoginData] = useState({ userid: '', userpw: '' });
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [userData, setUserData] = useState(null);
+  const [loginStatus, setLoginStatus] = useState(null);
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuthAndFetchUserData = async () => {
+    const checkAuth = async () => {
       const token = localStorage.getItem('accessToken');
       if (token) {
-        setIsLoggedIn(true);
         try {
-          await fetchUserData(token);
+          const response = await axios.get('/users/me');
+          setUserData(response.data);
+          setIsLoggedIn(true);
         } catch (error) {
-          if (error.response && error.response.status === 403) {
-            await refreshAccessToken();
-          } else {
-            handleLogout();
-          }
+          console.error('Authentication error:', error);
+          handleLogout();
         }
       }
     };
 
-    checkAuthAndFetchUserData();
+    checkAuth();
   }, []);
-
-  const fetchUserData = async (token) => {
-    const response = await axios.get('/users/me', {
-      headers: { 'Authorization': `Bearer ${token}` }
-    });
-    setUserData(response.data);
-  };
-
-  const refreshAccessToken = async () => {
-    try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      const response = await axios.post('/users/token', { refreshToken });
-      localStorage.setItem('accessToken', response.data.accessToken);
-      await fetchUserData(response.data.accessToken);
-    } catch (error) {
-      console.error('Error refreshing token:', error);
-      handleLogout();
-    }
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setLoginData(prevState => ({
-      ...prevState,
-      [name]: value
-    }));
+    setLoginData(prevState => ({ ...prevState, [name]: value }));
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     try {
       const response = await axios.post('/users/login', loginData);
-      setLoginStatus(response.data.msg);
       localStorage.setItem('accessToken', response.data.accessToken);
       localStorage.setItem('refreshToken', response.data.refreshToken);
       setIsLoggedIn(true);
-      await fetchUserData(response.data.accessToken);
+      setUserData(response.data.user);
+      setLoginStatus('로그인 성공');
       navigate('/');
     } catch (error) {
-      setLoginStatus(error.response?.data?.msg || '로그인 실패');
+      console.error('Login error:', error);
+      setLoginStatus('로그인 실패');
     }
   };
 
   const handleLogout = async () => {
     try {
-      const refreshToken = localStorage.getItem('refreshToken');
-      await axios.post('/users/logout', { refreshToken });
+      await axios.post('/users/logout');
     } catch (error) {
-      console.error('Error during logout:', error);
+      console.error('Logout error:', error);
     } finally {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');

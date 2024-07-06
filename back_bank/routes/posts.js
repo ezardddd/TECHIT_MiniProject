@@ -1,15 +1,15 @@
 const router = require('express').Router();
 const setup = require('../db_setup');
 const sha = require('sha256');
-const authenticateToken = require("")
-router.post('/user/posts',authenticateToken,async(req, res) => {
+const authJWT = require("../middleware/authJWT");
+router.post('/user/posts',authJWT,async(req, res) => {
     const { mongodb, mysqldb } = await setup();
     const {title,content, currentAmount} = req.body;
     const author = req.user.userid;
     mysqldb.query('INSERT INTO posts (userid, title, content, goal, currentAmount, investorCount) VALUES (?, ?, ?, ?, 0, 0)'
         ,[title,content,currentAmount],(err , result) => {
         if(err){
-            console.error('계시물 생성이 안됩니다.:', err);
+            console.error('게시물 생성이 안됩니다.:', err);
             res.status(500).json({ msg: '서버 오류' });
         }else {
             res.status(201).json({ msg: '게시글이 생성되었습니다.', postId: result.insertId });
@@ -25,7 +25,7 @@ router.get('/user/list', async(req, res) => {
 
 router.delete('/user/post', async(req, res) => {
     const { mongodb, mysqldb  } = await setup();
-    const postId = req.body.id
+    const postId = req.userid
 
     mysqldb.query('DELETE FROM post WHERE id = ?', [postId], (err, result) => {
         if (err) {
