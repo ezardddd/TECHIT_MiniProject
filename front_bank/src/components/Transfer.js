@@ -37,6 +37,7 @@ function Transfer() {
     };
 
     return (
+        <div className="page-container">
         <div className="transfer-container">
             <h2>계좌 이체</h2>
             <form onSubmit={handleSubmit} className="transfer-form">
@@ -90,6 +91,7 @@ function Transfer() {
                 </div>
                 <button type="submit" className="transfer-submit-btn">이체하기</button>
             </form>
+        </div>
         </div>
     );
 }

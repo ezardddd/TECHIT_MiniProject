@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import axios from './axiosConfig';
 import './Setup2FA.css';
 
@@ -7,6 +8,7 @@ function Setup2FA() {
   const [secret, setSecret] = useState('');
   const [token, setToken] = useState('');
   const [message, setMessage] = useState('');
+  const navigate = useNavigate();
 
   const setup2FA = async () => {
     try {
@@ -22,12 +24,17 @@ function Setup2FA() {
     try {
       const response = await axios.post('/users/verify2fa', { token });
       setMessage(response.data.msg);
+      if (response.data.msg === "2FA 인증 성공") {
+        alert('2FA 설정이 완료되었습니다. 메인 페이지로 이동합니다.');
+        navigate('/');
+      }
     } catch (error) {
       setMessage('2FA 확인 실패');
     }
   };
 
   return (
+    <div className="page-container">
     <div className="setup-2fa-container">
       <h2>2FA 설정</h2>
       <button onClick={setup2FA}>2FA 설정 시작</button>
@@ -41,6 +48,7 @@ function Setup2FA() {
       />
       <button onClick={verify2FA}>2FA 확인</button>
       {message && <p>{message}</p>}
+    </div>
     </div>
   );
 }
