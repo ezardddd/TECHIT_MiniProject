@@ -11,7 +11,8 @@ function Transfer() {
     const [transferData, setTransferData] = useState({
         receiveAccNumber: '',
         amount: '',
-        accpw: ''
+        accpw: '',
+        twoFactorToken: '' // 2FA 토큰 필드 추가
     });
 
     const handleChange = (e) => {
@@ -25,7 +26,8 @@ function Transfer() {
                 sendAccNumber,
                 receiveAccNumber: transferData.receiveAccNumber,
                 amount: parseInt(transferData.amount),
-                accpw: transferData.accpw
+                accpw: transferData.accpw,
+                twoFactorToken: transferData.twoFactorToken // 2FA 토큰 포함
             });
             alert(response.data.msg);
             navigate('/view-accounts');
@@ -72,6 +74,18 @@ function Transfer() {
                         value={transferData.accpw}
                         onChange={handleChange}
                         required
+                    />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="twoFactorToken">2FA 코드</label>
+                    <input
+                        type="text"
+                        id="twoFactorToken"
+                        name="twoFactorToken"
+                        value={transferData.twoFactorToken}
+                        onChange={handleChange}
+                        required
+                        placeholder="6자리 2FA 코드 입력"
                     />
                 </div>
                 <button type="submit" className="transfer-submit-btn">이체하기</button>

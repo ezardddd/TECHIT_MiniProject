@@ -3,6 +3,7 @@ const setup = require('../db_setup');
 const sha = require('sha256');
 const { MongoClient } = require('mongodb');
 const authJWT = require('../middleware/authJWT');
+const auth2FA = require('../middleware/auth2FA');
 const express = require('express');
 
 ac.use(express.json());
@@ -150,7 +151,7 @@ ac.get('/accounts/getReceiverAccountInfo', authJWT, async(req, res) => {
 //플로우 : 유저가 상대계좌확인->계좌비밀번호 확인->이체 진행
 //선행 조건 : 내 계좌 중 하나의 계좌 조회, 계좌 비밀번호 인증
 //내 계좌 잔고 감소 -> 상대계좌 잔고 증가 -> 거래내역 추가
-ac.post('/accounts/transfer', authJWT, async(req, res) => {
+ac.post('/accounts/transfer', authJWT, auth2FA, async(req, res) => {
     const { mysqldb } = await setup();
     
     const { sendAccNumber, receiveAccNumber, amount, accpw } = req.body;

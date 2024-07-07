@@ -86,6 +86,7 @@ function Navbar() {
           <>
             <li><Link to="/view-accounts">계좌 조회</Link></li>
             <li><Link to="/create-account">계좌 생성</Link></li>
+            <li><Link to="/setup-2fa" className="btn-setup-2fa">2FA 설정</Link></li>
           </>
         )}
       </ul>
