@@ -1,3 +1,4 @@
+const google_2fa = require('express').Router();
 const dotenv = require("dotenv").config();
 const setup = require("./db_setup");
 const express = require("express");
