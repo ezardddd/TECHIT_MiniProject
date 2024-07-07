@@ -1,45 +1,59 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import axios from './axiosConfig';
+import './ViewAccounts.css';
 
 function ViewAccounts() {
     const [accounts, setAccounts] = useState([]);
 
-    useEffect(() =>{
+    useEffect(() => {
         fetchAccounts();
     }, []);
 
-    const fetchAccounts = async () =>{
-        try{
+    const fetchAccounts = async () => {
+        try {
             const response = await axios.get('/getAccounts');
             setAccounts(response.data);
-        }catch(err){
+        } catch (err) {
             console.error('계좌 조회 오류', err);
         }
     };
 
+    const getAccountTypeText = (accType) => {
+        switch(accType) {
+            case 'basic':
+                return '기본 계좌';
+            case 'funding':
+                return '펀딩 계좌';
+            default:
+                return '알 수 없는 계좌 유형';
+        }
+    };
+
     return (
-        <div>
-          <h2>내 계좌 목록</h2>
-          {accounts.length === 0 ? (
-            <div>
-              <p>계좌가 없습니다.</p>
-              <Link to="/create-account">계좌 생성하기</Link>
-            </div>
-          ) : (
-            <ul>
-              {accounts.map((account) => (
-                <li key={account.accid}>
-                  <p>계좌번호: {account.accNumber}</p>
-                  <p>계좌유형: {account.accType}</p>
-                  <p>잔액: {account.accAmount}원</p>
-                  <button>이체내역</button>
-                </li>
-              ))}
-            </ul>
-          )}
+        <div className="view-accounts-container">
+            <h2 className="view-accounts-header">내 계좌 목록</h2>
+            {accounts.length === 0 ? (
+                <div className="no-accounts">
+                    <p>계좌가 없습니다.</p>
+                    <Link to="/create-account" className="create-account-link">계좌 생성하기</Link>
+                </div>
+            ) : (
+                <ul className="accounts-list">
+                    {accounts.map((account) => (
+                        <li key={account.accid} className="account-item">
+                            <div className="account-info">
+                                <p className="account-number">계좌번호: {account.accNumber}</p>
+                                <p className="account-type">계좌유형: {getAccountTypeText(account.accType)}</p>
+                                <p className="account-balance">잔액: {account.accAmount.toLocaleString()}원</p>
+                            </div>
+                            <button className="transfer-history-btn">이체내역</button>
+                        </li>
+                    ))}
+                </ul>
+            )}
         </div>
-      );
+    );
 }
 
 export default ViewAccounts;

@@ -43,7 +43,7 @@ instance.interceptors.response.use(
         console.error('토큰 갱신 실패:', err);
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/login';
+        window.location.href = '/';
         return Promise.reject(err);
       }
     }

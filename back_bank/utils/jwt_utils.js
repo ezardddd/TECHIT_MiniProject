@@ -12,7 +12,7 @@ module.exports = {
 
     return jwt.sign(payload, secret, {
       algorithm: 'HS256',
-      expiresIn: '1m', // 테스트를 위해 1분으로 설정
+      expiresIn: '15m', 
     });
   },
   verify: (token) => {
