@@ -5,6 +5,9 @@ const jwt = require('../utils/jwt_utils');
 const authJWT = require('../middleware/authJWT');
 const refresh = require('../utils/refresh');
 
+
+router.post('/users/refresh', refresh);
+
 router.post('/users/insertMember', async function (req, res) {
   const { mongodb, mysqldb } = await setup();
   mongodb
@@ -135,19 +138,35 @@ router.get('/users/me', authJWT, async (req, res) => {
   }
 });
 
-router.post('/users/refresh', refresh);
-
 router.post('/users/logout', async (req, res) => {
-  const { refreshToken } = req.body;
-  if (!refreshToken) return res.sendStatus(400);
-
+  console.log(req.headers['refresh'], req.headers['authorization']?.split(' ')[1]);
   try {
+    const accessToken = req.headers['authorization']?.split(' ')[1];
+    const refreshToken = req.headers['refresh'];
+
+    if (!refreshToken || !accessToken) {
+      return res.status(400).json({ msg: "리프레시 토큰과 액세스 토큰이 필요합니다." });
+    }
+
+    // JWT 검증 (옵션)
+    try {
+      jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
+    } catch (err) {
+      console.log("액세스 토큰 만료, 로그아웃 계속 진행");
+    }
+
+    // refreshToken을 데이터베이스에서 제거
     const { mongodb } = await setup();
-    await mongodb.collection("refreshTokens").deleteOne({ token: refreshToken });
-    res.sendStatus(204);
+    const result = await mongodb.collection("refreshTokens").deleteOne({ token: refreshToken });
+
+    if (result.deletedCount === 0) {
+      return res.status(400).json({ msg: "유효하지 않은 리프레시 토큰입니다." });
+    }
+
+    res.status(200).json({ msg: "로그아웃 성공" });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ msg: "로그아웃 처리 중 오류가 발생했습니다." });
+    console.error('로그아웃 에러:', error);
+    res.status(500).json({ msg: "서버 오류", error: error.message });
   }
 });
 

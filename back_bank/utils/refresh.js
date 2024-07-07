@@ -1,6 +1,5 @@
-const { sign, verify, refreshVerify, refresh: generateRefresh } = require('../utils/jwt_utils');
+const { sign, verify, refreshVerify } = require('../utils/jwt_utils');
 const jwt = require('jsonwebtoken');
-const setup = require('../db_setup');
 
 const refresh = async (req, res) => {
   if (req.headers.authorization && req.headers.refresh) {
@@ -28,28 +27,24 @@ const refresh = async (req, res) => {
       } else {
         const user = { userid: decoded.userid, role: decoded.role };
         const newAccessToken = sign(user);
-        const newRefreshToken = generateRefresh();
-        const currentTime = new Date();
-
-        const { mongodb } = await setup();
-        await mongodb.collection("refreshTokens").updateOne(
-          { userid: decoded.userid },
-          { $set: { token: newRefreshToken, createdAt: currentTime } },
-          { upsert: true }
-        );
 
         return res.status(200).json({
           ok: true,
           data: {
             accessToken: newAccessToken,
-            refreshToken: newRefreshToken,
+            refreshToken: refreshTokenFromClient, // 기존 리프레시 토큰 재사용
           },
         });
       }
-    } else {
+    } else if (authResult.ok === true) {
       return res.status(400).json({
         ok: false,
         message: 'Access token is not expired',
+      });
+    } else {
+      return res.status(401).json({
+        ok: false,
+        message: 'Invalid access token',
       });
     }
   } else {

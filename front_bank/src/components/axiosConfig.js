@@ -26,7 +26,7 @@ instance.interceptors.response.use(
       originalRequest._retry = true;
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post('/users/refresh', {}, {
+        const response = await axios.post('https://localhost:443/users/refresh', {}, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             'Refresh': refreshToken
@@ -40,10 +40,11 @@ instance.interceptors.response.use(
         originalRequest.headers['Authorization'] = `Bearer ${accessToken}`;
         return instance(originalRequest);
       } catch (err) {
+        alert(`토큰 갱신 실패: ${err.message}`);
         console.error('토큰 갱신 실패:', err);
         localStorage.removeItem('accessToken');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/';
+        //window.location.href = '/error';
         return Promise.reject(err);
       }
     }
