@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const instance = axios.create({
-  baseURL: 'https://localhost:3000',
+  baseURL: '/api',
   withCredentials: true
 });
 
@@ -26,7 +26,7 @@ instance.interceptors.response.use(
       originalRequest._retry = true;
       try {
         const refreshToken = localStorage.getItem('refreshToken');
-        const response = await axios.post('https://localhost:443/users/refresh', {}, {
+        const response = await axios.post('/users/refresh', {}, {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             'Refresh': refreshToken

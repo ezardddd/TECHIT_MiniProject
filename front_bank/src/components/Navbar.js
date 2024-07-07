@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Navbar.css';
-import axios from './axiosConfig';  // 경로를 상대 경로로 수정
+import axios from './axiosConfig';  // axiosConfig에서 설정한 인스턴스 사용
 
 function Navbar() {
   const [loginData, setLoginData] = useState({ userid: '', userpw: '' });
@@ -11,22 +11,22 @@ function Navbar() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const checkAuth = async () => {
-      const token = localStorage.getItem('accessToken');
-      if (token) {
-        try {
-          const response = await axios.get('/users/me');
-          setUserData(response.data);
-          setIsLoggedIn(true);
-        } catch (error) {
-          console.error('Authentication error:', error);
-          handleLogout();
-        }
-      }
-    };
-
     checkAuth();
   }, []);
+
+  const checkAuth = async () => {
+    const token = localStorage.getItem('accessToken');
+    if (token) {
+      try {
+        const response = await axios.get('/users/me');
+        setUserData(response.data);
+        setIsLoggedIn(true);
+      } catch (error) {
+        console.error('Authentication error:', error);
+        // 에러 처리는 axiosConfig의 인터셉터에서 처리됩니다.
+      }
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -51,15 +51,29 @@ function Navbar() {
 
   const handleLogout = async () => {
     try {
-      await axios.post('/users/logout');
-    } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
+      const accessToken = localStorage.getItem('accessToken');
+      const refreshToken = localStorage.getItem('refreshToken');
+      
+      if (!accessToken || !refreshToken) {
+        throw new Error('토큰이 없습니다.');
+      }
+  
+      await axios.post('/api/users/logout', {}, {
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Refresh': refreshToken
+        }
+      });
+  
+      // 로그아웃 성공 처리
       localStorage.removeItem('accessToken');
       localStorage.removeItem('refreshToken');
       setIsLoggedIn(false);
       setUserData(null);
       navigate('/');
+    } catch (error) {
+      console.error('Logout error:', error);
+      setLoginStatus('로그아웃 실패');
     }
   };
 
