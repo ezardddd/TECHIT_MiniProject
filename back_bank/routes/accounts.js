@@ -16,7 +16,7 @@ const generateRandomAccountNumber = () => {
 /////////////계정 관리 기능/////////////
 
 //계정 생성
-ac.post('/makeAccount', authJWT, async(req, res) => {
+ac.post('/accounts/makeAccount', authJWT, async(req, res) => {
     console.log('Request body:', req.body);
     console.log('User ID:', req.userid);
 
@@ -49,7 +49,7 @@ ac.post('/makeAccount', authJWT, async(req, res) => {
 
 //계정 조회
 //개인의 여러 계정을 조회
-ac.get('/getAccounts', authJWT, async(req, res) => {
+ac.get('/accounts/getAccounts', authJWT, async(req, res) => {
     const { mongodb, mysqldb } = await setup();
     let rows = mysqldb.query('select * from Account where userid = ?',[req.userid],(err, rows, fields)=>{
         if (err){
@@ -65,7 +65,7 @@ ac.get('/getAccounts', authJWT, async(req, res) => {
 
 //총액조회
 //개인 account들의 amount의 총합 조회
-ac.get('/getAmount', authJWT, async(req, res) => {
+ac.get('/accounts/getAmount', authJWT, async(req, res) => {
     const { mongodb, mysqldb } = await setup();
     let rows = mysqldb.query('select SUM(accAmount) from Account where userid = ?',[req.userid],(err, rows, fields)=>{
         if (err){
@@ -81,7 +81,7 @@ ac.get('/getAmount', authJWT, async(req, res) => {
 
 //계정 조회 - 이미 토큰 검증 후 상황
 //개인의 여러 계정 중 하나의 계좌를 조회, accountid 이용
-ac.get('/getTransfer', authJWT, async(req, res) => {
+ac.get('/accounts/getTransfer', authJWT, async(req, res) => {
     const { mongodb, mysqldb } = await setup();
     let rows = mysqldb.query('select * from transfers where sendAccNumber = ? OR receiveAccNumber = ?',[req.body.accNumber, req.body.accNumber],(err, rows, fields)=>{
         if (err){
@@ -96,7 +96,7 @@ ac.get('/getTransfer', authJWT, async(req, res) => {
 })
 
 //거래 내역 조회
-ac.get('/getTransfer', authJWT, async(req, res) => {
+ac.get('/accounts/getTransfer', authJWT, async(req, res) => {
     const { mongodb, mysqldb } = await setup();
     let rows = mysqldb.query('select * from transfers where sendAccNumber = ? OR receiveAccNumber = ?',[req.body.accNumber, req.body.accNumber],(err, rows, fields)=>{
         if (err){
@@ -114,8 +114,9 @@ ac.get('/getTransfer', authJWT, async(req, res) => {
 /////////////이체 기능/////////////
 
 //계좌 비밀번호 인증
-ac.get('/getTransfer', authJWT, async(req, res) => {
+ac.get('/accounts/getTransfer', authJWT, async(req, res) => {
     const { mongodb, mysqldb } = await setup();
+    
     let userAccPw = mysqldb.query('select accpw from transfers where accNumber=?',[req.body.accNumber]);
 
     if(userAccPw == req.body.accpw){
@@ -126,7 +127,7 @@ ac.get('/getTransfer', authJWT, async(req, res) => {
 })
 
 //상대 계좌 확인
-ac.get('/getReceiverAccountInfo', authJWT, async(req, res) => {
+ac.get('/accounts/getReceiverAccountInfo', authJWT, async(req, res) => {
     const { mongodb, mysqldb } = await setup();
     mysqldb.query('select userid from account where accNumber=?',[req.body.accNumber], async (err, rows, fields) => {
         if (err){
@@ -149,64 +150,53 @@ ac.get('/getReceiverAccountInfo', authJWT, async(req, res) => {
 //플로우 : 유저가 상대계좌확인->계좌비밀번호 확인->이체 진행
 //선행 조건 : 내 계좌 중 하나의 계좌 조회, 계좌 비밀번호 인증
 //내 계좌 잔고 감소 -> 상대계좌 잔고 증가 -> 거래내역 추가
-ac.post('/transfer', authJWT, async(req, res) => {
-    const { mongodb, mysqldb } = await setup();
+ac.post('/accounts/transfer', authJWT, async(req, res) => {
+    const { mysqldb } = await setup();
     
-    mysqldb.beginTransaction((err) => {
+    const { sendAccNumber, receiveAccNumber, amount, accpw } = req.body;
+
+    mysqldb.beginTransaction(async (err) => {
         if (err) {
-          return mysqldb.rollback(() => {
-            throw err;
-          });
+            return res.status(500).json({ msg: "트랜잭션 시작 오류" });
         }
         
-        mysqldb.query('UPDATE accounts SET accAmount = accAmount - ? where accNumber = ?', [req.body.money, req.body.sendAccNumber], (err, results) => {
-          if (err) {
-            return mysqldb.rollback(() => {
-              throw err;
-            });
-          }
-      
-          mysqldb.query('UPDATE accounts SET accAmount = accAmount + ? where accNumber = ?', [req.body.money, req.body.receiveAccNumber], (err, results) => {
-            if (err) {
-              return mysqldb.rollback(() => {
-                throw err;
-              });
+        try {
+            // 계좌 비밀번호 확인
+            const [senderAccount] = await mysqldb.promise().query('SELECT * FROM Account WHERE accNumber = ? AND userid = ?', [sendAccNumber, req.userid]);
+            if (senderAccount.length === 0 || senderAccount[0].accpw !== accpw) {
+                throw new Error("계좌 정보가 일치하지 않습니다.");
             }
 
-            mysqldb.query('select accid from Account where accNumber = ?',[req.body.sendAccNumber],(err, senderAccid) => {
-                if (err) {
-                  return mysqldb.rollback(() => {
-                    throw err;
-                  });
-                }
-                mysqldb.query('INSERT INTO transfers VALUES (?,?,?,?,NOW(),?)', [null,senderAccid[0].accid,req.body.sendAccNumber,req.body.receiveAccNumber,req.body.money],(err, rows, fields)=>{
-                    if (err) {
-                        return mysqldb.rollback(() => {
-                        throw err;
-                        });
-                    }
-                    mysqldb.commit((err) => {
-                        if (err) {
-                            return mysqldb.rollback(() => {
-                                throw err;
-                            });
-                        }
-                        console.log('Transaction Completed Successfully.');
-                        res.json({ msg: "이체 성공" });
-                    });
-                });
-            });
-          });
-        });
+            // 잔액 확인
+            if (senderAccount[0].accAmount < amount) {
+                throw new Error("잔액이 부족합니다.");
+            }
+
+            // 송금자 계좌 잔액 감소
+            await mysqldb.promise().query('UPDATE Account SET accAmount = accAmount - ? WHERE accNumber = ?', [amount, sendAccNumber]);
+
+            // 수취자 계좌 잔액 증가
+            await mysqldb.promise().query('UPDATE Account SET accAmount = accAmount + ? WHERE accNumber = ?', [amount, receiveAccNumber]);
+
+            // 거래 내역 추가
+            await mysqldb.promise().query('INSERT INTO transfers (accid, sendAccNumber, recieveAccNumber, transfertime, transfervalue) VALUES (?, ?, ?, NOW(), ?)', 
+                [senderAccount[0].accid, sendAccNumber, receiveAccNumber, amount]);
+
+            await mysqldb.promise().commit();
+            res.json({ msg: "이체 성공" });
+        } catch (error) {
+            await mysqldb.promise().rollback();
+            res.status(400).json({ msg: error.message });
+        }
     });
-})
+});
 
 
 /////////////펀딩 기능/////////////
 
 //게시물에 펀딩하기
 //내 계좌에서 잔고 감소 -> 게시물의 펀딩값에 잔고 증가 -> 거래내역 추가
-ac.post('/funding', authJWT, async(req, res) => {
+ac.post('/accounts/funding', authJWT, async(req, res) => {
     const { mongodb, mysqldb } = await setup();
     mysqldb.beginTransaction((err) => {
         if (err) {

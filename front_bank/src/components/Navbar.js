@@ -81,7 +81,6 @@ function Navbar() {
     <nav className="navbar">
       <div className="navbar-logo">금융웹</div>
       <ul className="navbar-links">
-        <li><Link to="/account">계좌</Link></li>
         <li><Link to="/funding">펀딩</Link></li>
         {isLoggedIn && (
           <>

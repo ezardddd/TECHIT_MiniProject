@@ -10,7 +10,7 @@ function CreateAccount() {
     const handleSubmit = async (e) =>{
         e.preventDefault();
         try{
-            const response = await axios.post('/makeAccount',{
+            const response = await axios.post('/accounts/makeAccount',{
                 accType,
                 accpw,
                 accAmount: 50000 // 초기 금액 5만원 설정

@@ -4,6 +4,7 @@ import MainPage from './components/MainPage';
 import SignUp from './components/SignUp';
 import CreateAccount from './components/CreateAccount';
 import ViewAccounts from './components/ViewAccounts';
+import Transfer from './components/Transfer';
 
 function App() {
   return (
@@ -13,6 +14,7 @@ function App() {
         <Route path="/signup" element={<SignUp />} />
         <Route path="/create-account" element={<CreateAccount />} />
         <Route path="/view-accounts" element={<ViewAccounts />} />
+        <Route path="/transfer" element={<Transfer />} />
       </Routes>
     </Router>
   );

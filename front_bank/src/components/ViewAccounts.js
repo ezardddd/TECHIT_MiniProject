@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from './axiosConfig';
 import './ViewAccounts.css';
 
 function ViewAccounts() {
     const [accounts, setAccounts] = useState([]);
+    const navigate = useNavigate();
 
     useEffect(() => {
         fetchAccounts();
@@ -12,7 +13,7 @@ function ViewAccounts() {
 
     const fetchAccounts = async () => {
         try {
-            const response = await axios.get('/getAccounts');
+            const response = await axios.get('/accounts/getAccounts');
             setAccounts(response.data);
         } catch (err) {
             console.error('계좌 조회 오류', err);
@@ -28,6 +29,10 @@ function ViewAccounts() {
             default:
                 return '알 수 없는 계좌 유형';
         }
+    };
+
+    const handleTransfer = (accNumber) => {
+        navigate('/transfer', { state: { sendAccNumber: accNumber } });
     };
 
     return (
@@ -47,6 +52,7 @@ function ViewAccounts() {
                                 <p className="account-type">계좌유형: {getAccountTypeText(account.accType)}</p>
                                 <p className="account-balance">잔액: {account.accAmount.toLocaleString()}원</p>
                             </div>
+                            <button onClick={() => handleTransfer(account.accNumber)} className="transfer-btn">이체하기</button>
                             <button className="transfer-history-btn">이체내역</button>
                         </li>
                     ))}
