@@ -108,7 +108,7 @@ router.post('/funding/:id/invest', authJWT,auth2FA, async (req, res) => {
         
       //펀딩 거래내역 있는지 확인
         let postReceiveAccNumber = "funding-"+req.params.id;
-        let alreadyInvestor = mysqldb.query('select * from transfers where receiveAccNumber = ? AND sendAccNumber = ?',[postReceiveAccNumber, sendAccNumber]);
+        let alreadyInvestor = mysqldb.query('select * from investors where userid = ? AND postid = ?',[req.userid, req.params.id]);
 
       //거래 내역이 없으면 investorCount 1 추가하면서 금액 추가
         await new Promise((resolve, reject) => {
