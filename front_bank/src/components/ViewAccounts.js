@@ -36,6 +36,7 @@ function ViewAccounts() {
     };
 
     return (
+        <div className="page-container">
         <div className="view-accounts-container">
             <h2 className="view-accounts-header">내 계좌 목록</h2>
             {accounts.length === 0 ? (
@@ -58,6 +59,7 @@ function ViewAccounts() {
                     ))}
                 </ul>
             )}
+        </div>
         </div>
     );
 }

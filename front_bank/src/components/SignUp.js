@@ -67,6 +67,7 @@ function SignUp() {
   };
 
   return (
+    <div className="page-container">
     <div className="signup-container">
       <h2>회원가입</h2>
       {message && <div className="message">{message}</div>}
@@ -167,6 +168,7 @@ function SignUp() {
         </div>
         <button type="submit" className="signup-button">회원가입</button>
       </form>
+    </div>
     </div>
   );
 }

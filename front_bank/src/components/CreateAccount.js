@@ -24,6 +24,7 @@ function CreateAccount() {
     };
 
     return (
+      <div className="page-container">
         <div>
           <h2>계좌 생성</h2>
           <form onSubmit={handleSubmit}>
@@ -48,6 +49,7 @@ function CreateAccount() {
             </div>
             <button type="submit">계좌 생성</button>
           </form>
+        </div>
         </div>
       );
 }

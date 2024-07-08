@@ -4,6 +4,10 @@ const sha = require('sha256');
 const jwt = require('../utils/jwt_utils');
 const authJWT = require('../middleware/authJWT');
 const refresh = require('../utils/refresh');
+const speakeasy = require('speakeasy');
+const qrcode = require('qrcode');
+
+
 
 
 router.post('/users/refresh', refresh);
@@ -167,6 +171,57 @@ router.post('/users/logout', async (req, res) => {
   } catch (error) {
     console.error('로그아웃 에러:', error);
     res.status(500).json({ msg: "서버 오류", error: error.message });
+  }
+});
+
+
+//2fa 설정
+router.post('/users/setup2fa', authJWT, async (req, res) => {
+  const { mongodb } = await setup();
+  const secret = speakeasy.generateSecret({ length: 32 });
+
+  try {
+    await mongodb.collection("user").updateOne(
+      { userid: req.userid },
+      { $set: { twoFactorSecret: secret.base32 } }
+    );
+
+    const otpauth_url = speakeasy.otpauthURL({
+      secret: secret.ascii,
+      label: `YourApp:${req.userid}`,
+      issuer: 'YourApp'
+    });
+
+    qrcode.toDataURL(otpauth_url, (err, data_url) => {
+      res.json({ secret: secret.base32, qr_code: data_url });
+    });
+  } catch (error) {
+    console.error('2FA 설정 오류:', error);
+    res.status(500).json({ msg: "서버 오류" });
+  }
+});
+
+// 2FA 확인
+router.post('/users/verify2fa', authJWT, async (req, res) => {
+  const { token } = req.body;
+  const { mongodb } = await setup();
+
+  try {
+    const user = await mongodb.collection("user").findOne({ userid: req.userid });
+    const verified = speakeasy.totp.verify({
+      secret: user.twoFactorSecret,
+      encoding: 'base32',
+      token: token
+    });
+
+    if (verified) {
+      res.json({ msg: "2FA 인증 성공" });
+    } else {
+      res.status(400).json({ msg: "2FA 인증 실패" });
+    }
+  } catch (error) {
+    console.error('2FA 확인 오류:', error);
+    res.status(500).json({ msg: "서버 오류" });
   }
 });
 
