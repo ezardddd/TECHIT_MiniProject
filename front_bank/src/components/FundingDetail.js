@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import axios from './axiosConfig';
 import './FundingDetail.css';
+import FundingModal from './FundingModal';
 
 function FundingDetail() {
   const [project, setProject] = useState(null);
-  const [fundAmount, setFundAmount] = useState('');
-  const [twoFACode, setTwoFACode] = useState('');
-  const [showTwoFAInput, setShowTwoFAInput] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const { id } = useParams();
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchProjectDetails();
@@ -24,34 +22,19 @@ function FundingDetail() {
     }
   };
 
-  const handleFund = async (e) => {
-    e.preventDefault();
-    if (parseFloat(fundAmount) <= 0) {
-      alert('펀딩 금액은 0보다 커야 합니다.');
-      return;
-    }
-    setShowTwoFAInput(true);
-  };
-
-  const handleTwoFASubmit = async (e) => {
-    e.preventDefault();
+  const handleFundingSubmit = async (projectId, accountNumber, amount, twoFACode) => {
     try {
-      await axios.post(`/funding/${id}/invest`, {
-        amount: fundAmount,
-        twoFactorToken: twoFACode  
+      await axios.post(`/funding/${projectId}/invest`, {
+        accountNumber,
+        amount,
+        twoFactorToken: twoFACode
       });
       alert('펀딩에 성공했습니다!');
       fetchProjectDetails();
-      setFundAmount('');
-      setTwoFACode('');
-      setShowTwoFAInput(false);
+      setIsModalOpen(false);
     } catch (error) {
-      console.error('펀딩 에러:', error.response || error);
-      if (error.response && error.response.status === 401) {
-        alert('2FA 인증에 실패했습니다. 다시 시도해주세요.');
-      } else {
-        alert(`펀딩 중 오류가 발생했습니다: ${error.response?.data?.message || '알 수 없는 오류'}`);
-      }
+      console.error('펀딩 오류:', error);
+      alert('펀딩 중 오류가 발생했습니다.');
     }
   };
 
@@ -70,30 +53,13 @@ function FundingDetail() {
       <p>현재 모금액: {project.currentAmount.toLocaleString()}원</p>
       <p>투자자 수: {project.investorCount}명</p>
       <p>작성자: {project.username}</p>
-      {!showTwoFAInput ? (
-        <form onSubmit={handleFund} className="funding-form">
-          <input
-            type="number"
-            value={fundAmount}
-            onChange={(e) => setFundAmount(e.target.value)}
-            placeholder="펀딩 금액"
-            min="1"
-            required
-          />
-          <button type="submit">펀딩하기</button>
-        </form>
-      ) : (
-        <form onSubmit={handleTwoFASubmit} className="funding-form">
-          <input
-            type="text"
-            value={twoFACode}
-            onChange={(e) => setTwoFACode(e.target.value)}
-            placeholder="2FA 코드 입력"
-            required
-          />
-          <button type="submit">2FA 인증 및 펀딩하기</button>
-        </form>
-      )}
+      <button onClick={() => setIsModalOpen(true)}>펀딩하기</button>
+      <FundingModal
+        isOpen={isModalOpen}
+        onClose={() => setIsModalOpen(false)}
+        onSubmit={handleFundingSubmit}
+        projectId={id}
+      />
     </div>
   );
 }

@@ -227,5 +227,21 @@ ac.post('/accounts/transfer', authJWT, auth2FA, async(req, res) => {
     });
 });
 
+//펀딩 계좌 조회
+
+ac.get('/accounts/getFundingAccounts', authJWT, async (req, res) => {
+    const { mysqldb } = await setup();
+    try {
+        const [accounts] = await mysqldb.promise().query(
+            'SELECT accNumber, accAmount FROM Account WHERE userid = ? AND accType = "funding"',
+            [req.userid]
+        );
+        res.json(accounts);
+    } catch (error) {
+        console.error('펀딩 계좌 조회 오류:', error);
+        res.status(500).json({ message: '서버 오류가 발생했습니다.' });
+    }
+});
+
 
 module.exports = ac;
