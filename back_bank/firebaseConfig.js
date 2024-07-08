@@ -1,15 +1,16 @@
 const { initializeApp } = require("firebase/app");
 const { getStorage } = require("firebase/storage");
+const dotenv = require("dotenv").config();
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyAa74_GtHv2ZsZ4AEO5UKaBg93jNAw8LAo",
-  authDomain: "techit-miniproject.firebaseapp.com",
-  projectId: "techit-miniproject",
-  storageBucket: "techit-miniproject.appspot.com",
-  messagingSenderId: "360114002245",
-  appId: "1:360114002245:web:e5c611763203081f08862c",
-  measurementId: "G-6NHS0YQ162"
+  apiKey: process.env.FIREBASE_APIKEY,
+  authDomain: process.env.FIREBASE_AUTHDOMAIN,
+  projectId: process.env.FIREBASE_PROJECTID,
+  storageBucket: process.env.FIREBASE_STORAGEBUCKET,
+  messagingSenderId: process.env.FIREBASE_MESSAGINGSENDERID,
+  appId: process.env.FIREBASE_APPID,
+  measurementId: process.env.FIREBASE_MEASUREMENTID
 };
 
 // Initialize Firebase
