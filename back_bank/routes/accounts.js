@@ -96,21 +96,40 @@ ac.get('/accounts/getTransfer', authJWT, async(req, res) => {
     console.log('getTransfer ok')
 })
 
-//거래 내역 조회
-ac.get('/accounts/getTransfer', authJWT, async(req, res) => {
-    const { mongodb, mysqldb } = await setup();
-    let rows = mysqldb.query('select * from transfers where sendAccNumber = ? OR receiveAccNumber = ?',[req.body.accNumber, req.body.accNumber],(err, rows, fields)=>{
-        if (err){
-            res.status(500).json({ msg: "서버 오류" });
-        }
-        else{
-            console.log(rows); 
-            res.send(rows);
-        }
-    })
-    console.log('getTransfer ok')
-})
+// 계좌 이체 내역 조회
+ac.get('/accounts/getTransferHistory/:accNumber', authJWT, async (req, res) => {
+    const { mysqldb } = await setup();
+    const { accNumber } = req.params;
 
+    const query = `
+        SELECT 
+            transferid,
+            CASE 
+                WHEN sendAccNumber = ? THEN '송금'
+                ELSE '입금'
+            END AS type,
+            CASE 
+                WHEN sendAccNumber = ? THEN recieveAccNumber
+                ELSE sendAccNumber
+            END AS otherAccount,
+            transfertime,
+            CASE 
+                WHEN sendAccNumber = ? THEN -transfervalue
+                ELSE transfervalue
+            END AS amount
+        FROM transfers
+        WHERE sendAccNumber = ? OR recieveAccNumber = ?
+        ORDER BY transfertime DESC
+    `;
+
+    mysqldb.query(query, [accNumber, accNumber, accNumber, accNumber, accNumber], (err, results) => {
+        if (err) {
+            console.error('이체 내역 조회 오류:', err);
+            return res.status(500).json({ msg: "서버 오류" });
+        }
+        res.json(results);
+    });
+});
 
 /////////////이체 기능/////////////
 
