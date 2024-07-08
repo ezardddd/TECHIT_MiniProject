@@ -1,56 +1,40 @@
 import axios from 'axios';
 import { jwtDecode } from 'jwt-decode';
 
+let accessToken = null;
+
 const instance = axios.create({
   baseURL: '/api',
   withCredentials: true
 });
 
 const isTokenExpired = (token) => {
-  try {
-    const decoded = jwtDecode(token);
-    return decoded.exp < Date.now() / 1000;
-  } catch (e) {
-    return true;
-  }
+  if (!token) return true;
+  const decodedToken = jwtDecode(token);
+  return decodedToken.exp * 1000 < Date.now();
 };
 
 const refreshToken = async () => {
   try {
-    const accessToken = localStorage.getItem('accessToken');
-    const refreshToken = localStorage.getItem('refreshToken');
-    const response = await axios.post('https://localhost:443/users/refresh', {}, {
-      headers: {
-        'Authorization': `Bearer ${accessToken}`,
-        'Refresh': refreshToken
-      }
-    });
-    
-    if (response.data.ok) {
-      const { accessToken: newAccessToken } = response.data.data;
-      localStorage.setItem('accessToken', newAccessToken);
-      return newAccessToken;
+    const response = await axios.post('/api/users/refresh', {}, { withCredentials: true });
+    if (response.data.accessToken) {
+      accessToken = response.data.accessToken;
+      return accessToken;
     }
   } catch (error) {
     console.error('토큰 갱신 실패:', error);
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
-    window.location.href = '/';
+    accessToken = null;
   }
   return null;
 };
 
 instance.interceptors.request.use(
   async (config) => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-      if (isTokenExpired(token)) {
-        const newToken = await refreshToken();
-        if (newToken) {
-          config.headers.Authorization = `Bearer ${newToken}`;
-        }
-      }
+    if (!accessToken || isTokenExpired(accessToken)) {
+      accessToken = await refreshToken();
+    }
+    if (accessToken) {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
     return config;
   },
@@ -63,7 +47,7 @@ instance.interceptors.response.use(
   (response) => response,
   async (error) => {
     const originalRequest = error.config;
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (error.response && error.response.status === 401 && !originalRequest._retry) {
       originalRequest._retry = true;
       const newToken = await refreshToken();
       if (newToken) {

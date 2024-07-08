@@ -1,7 +1,12 @@
 const jwt = require('jsonwebtoken');
 const setup = require('../db_setup');
 
-const secret = process.env.SECRET;
+const secret = process.env.JWT_SECRET;
+const refreshSecret = process.env.JWT_REFRESH_SECRET;
+
+if (!secret || !refreshSecret) {
+  throw new Error('JWT secrets are not defined in environment variables');
+}
 
 module.exports = {
   sign: (user) => {
@@ -12,9 +17,10 @@ module.exports = {
 
     return jwt.sign(payload, secret, {
       algorithm: 'HS256',
-      expiresIn: '1m', 
+      expiresIn: '1m', // 테스트 위해 Access Token 유효 시간을 1분으로 설정
     });
   },
+
   verify: (token) => {
     try {
       const decoded = jwt.verify(token, secret);
@@ -30,18 +36,21 @@ module.exports = {
       };
     }
   },
+
   refresh: () => {
-    return jwt.sign({}, secret, {
+    return jwt.sign({}, refreshSecret, {
       algorithm: 'HS256',
       expiresIn: '14d',
     });
   },
+
   refreshVerify: async (token, userid) => {
-    const { mongodb } = await setup();
     try {
-      const refreshToken = await mongodb.collection("refreshTokens").findOne({ userid: userid });
-      if (refreshToken && token === refreshToken.token) {
-        // 리프레시 토큰의 생성 시간으로부터 경과된 시간 계산
+      jwt.verify(token, refreshSecret);
+      const { mongodb } = await setup();
+      const refreshToken = await mongodb.collection("refreshTokens").findOne({ userid: userid, token: token });
+      if (refreshToken) {
+        // 토큰의 생성 시간으로부터 경과된 시간 계산
         const currentTime = new Date();
         const tokenAge = (currentTime - refreshToken.createdAt) / 1000; // 초 단위로 변환
         

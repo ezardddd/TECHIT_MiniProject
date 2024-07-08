@@ -7,9 +7,6 @@ const refresh = require('../utils/refresh');
 const speakeasy = require('speakeasy');
 const qrcode = require('qrcode');
 
-
-
-
 router.post('/users/refresh', refresh);
 
 router.post('/users/insertMember', async function (req, res) {
@@ -28,7 +25,6 @@ router.post('/users/insertMember', async function (req, res) {
 
         const salt = generateSalt();
         console.log(req.body);
-        //password 암호화
         req.body.pw = sha(req.body.pw + salt);
         mongodb
           .collection("user")
@@ -96,7 +92,10 @@ router.post('/users/login', async (req, res) => {
       const hashedPassword = sha(userpw + salt);
 
       if (hashedPassword === user.userpw) {
-        const accessToken = jwt.sign(user);
+        const accessToken = jwt.sign({
+          userid: user.userid,
+          role: user.role
+        });
         const refreshToken = jwt.refresh();
         const currentTime = new Date();
 
@@ -106,10 +105,16 @@ router.post('/users/login', async (req, res) => {
           { upsert: true }
         );
 
+        res.cookie('refreshToken', refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict',
+          maxAge: 14 * 24 * 60 * 60 * 1000 // 14일
+        });
+
         res.json({
           msg: "로그인 성공",
           accessToken: accessToken,
-          refreshToken: refreshToken,
           user: { userid: user.userid, username: user.username }
         });
       } else {
@@ -142,40 +147,11 @@ router.get('/users/me', authJWT, async (req, res) => {
   }
 });
 
-router.post('/users/logout', async (req, res) => {
-  console.log(req.headers['refresh'], req.headers['authorization']?.split(' ')[1]);
-  try {
-    const accessToken = req.headers['authorization']?.split(' ')[1];
-    const refreshToken = req.headers['refresh'];
-
-    if (!refreshToken || !accessToken) {
-      return res.status(400).json({ msg: "리프레시 토큰과 액세스 토큰이 필요합니다." });
-    }
-
-    // JWT 검증 (옵션)
-    try {
-      jwt.verify(accessToken, process.env.ACCESS_TOKEN_SECRET);
-    } catch (err) {
-      console.log("액세스 토큰 만료, 로그아웃 계속 진행");
-    }
-
-    // refreshToken을 데이터베이스에서 제거
-    const { mongodb } = await setup();
-    const result = await mongodb.collection("refreshTokens").deleteOne({ token: refreshToken });
-
-    if (result.deletedCount === 0) {
-      return res.status(400).json({ msg: "유효하지 않은 리프레시 토큰입니다." });
-    }
-
-    res.status(200).json({ msg: "로그아웃 성공" });
-  } catch (error) {
-    console.error('로그아웃 에러:', error);
-    res.status(500).json({ msg: "서버 오류", error: error.message });
-  }
+router.post('/users/logout', (req, res) => {
+  res.clearCookie('refreshToken');
+  res.json({ msg: "로그아웃 성공" });
 });
 
-
-//2fa 설정
 router.post('/users/setup2fa', authJWT, async (req, res) => {
   const { mongodb } = await setup();
   const secret = speakeasy.generateSecret({ 
@@ -214,7 +190,6 @@ router.post('/users/setup2fa', authJWT, async (req, res) => {
   }
 });
 
-// 기존 2FA 확인 (재설정 전)
 router.post('/users/verify2fa', authJWT, async (req, res) => {
   const { token } = req.body;
   const { mongodb } = await setup();
@@ -230,7 +205,7 @@ router.post('/users/verify2fa', authJWT, async (req, res) => {
       secret: user.twoFactorSecret,
       encoding: 'base32',
       token: token,
-      algorithm: 'sha256' // 또는 사용자의 알고리즘
+      algorithm: 'sha256'
     });
 
     if (verified) {
@@ -244,8 +219,6 @@ router.post('/users/verify2fa', authJWT, async (req, res) => {
   }
 });
 
-
-//2FA 상태 확인
 router.get('/users/check2fa', authJWT, async (req, res) => {
   const { mongodb } = await setup();
 
@@ -263,7 +236,5 @@ router.get('/users/check2fa', authJWT, async (req, res) => {
     res.status(500).json({ msg: "서버 오류" });
   }
 });
-
-
 
 module.exports = router;

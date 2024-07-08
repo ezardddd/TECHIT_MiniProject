@@ -1,32 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import './Navbar.css';
-import axios from './axiosConfig';  // axiosConfig에서 설정한 인스턴스 사용
+import axios from './axiosConfig';
 
-function Navbar() {
+function Navbar({ isAuthenticated, setAuthState, user }) {
   const [loginData, setLoginData] = useState({ userid: '', userpw: '' });
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
-  const [userData, setUserData] = useState(null);
   const [loginStatus, setLoginStatus] = useState(null);
   const navigate = useNavigate();
-
-  useEffect(() => {
-    checkAuth();
-  }, []);
-
-  const checkAuth = async () => {
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      try {
-        const response = await axios.get('/users/me');
-        setUserData(response.data);
-        setIsLoggedIn(true);
-      } catch (error) {
-        console.error('Authentication error:', error);
-        // 에러 처리는 axiosConfig의 인터셉터에서 처리됩니다.
-      }
-    }
-  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -37,10 +17,11 @@ function Navbar() {
     e.preventDefault();
     try {
       const response = await axios.post('/users/login', loginData);
-      localStorage.setItem('accessToken', response.data.accessToken);
-      localStorage.setItem('refreshToken', response.data.refreshToken);
-      setIsLoggedIn(true);
-      setUserData(response.data.user);
+      setAuthState({
+        isAuthenticated: true,
+        isLoading: false,
+        user: response.data.user
+      });
       setLoginStatus('로그인 성공');
       navigate('/');
     } catch (error) {
@@ -51,25 +32,12 @@ function Navbar() {
 
   const handleLogout = async () => {
     try {
-      const accessToken = localStorage.getItem('accessToken');
-      const refreshToken = localStorage.getItem('refreshToken');
-      
-      if (!accessToken || !refreshToken) {
-        throw new Error('토큰이 없습니다.');
-      }
-  
-      await axios.post('/api/users/logout', {}, {
-        headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Refresh': refreshToken
-        }
+      await axios.post('/users/logout');
+      setAuthState({
+        isAuthenticated: false,
+        isLoading: false,
+        user: null
       });
-  
-      // 로그아웃 성공 처리
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      setIsLoggedIn(false);
-      setUserData(null);
       navigate('/');
     } catch (error) {
       console.error('Logout error:', error);
@@ -82,7 +50,7 @@ function Navbar() {
       <Link to="/" className="navbar-logo">금융웹</Link>
       <ul className="navbar-links">
         <li><Link to="/funding">펀딩</Link></li>
-        {isLoggedIn && (
+        {isAuthenticated && (
           <>
             <li><Link to="/view-accounts">계좌 조회</Link></li>
             <li><Link to="/create-account">계좌 생성</Link></li>
@@ -90,7 +58,7 @@ function Navbar() {
           </>
         )}
       </ul>
-      {!isLoggedIn ? (
+      {!isAuthenticated ? (
         <form onSubmit={handleLogin} className="navbar-login">
           <input
             type="text"
@@ -112,12 +80,12 @@ function Navbar() {
         </form>
       ) : (
         <div className="navbar-user-info">
-          <span>{userData?.username}님 환영합니다!</span>
+          <span>{user?.username}님 환영합니다!</span>
           <button onClick={handleLogout} className="btn-logout">로그아웃</button>
         </div>
       )}
       {loginStatus && <p>{loginStatus}</p>}
-      {!isLoggedIn && <Link to="/signup" className="btn-signup">회원가입</Link>}
+      {!isAuthenticated && <Link to="/signup" className="btn-signup">회원가입</Link>}
     </nav>
   );
 }

@@ -1,61 +1,58 @@
-const { sign, verify, refreshVerify } = require('../utils/jwt_utils');
-const jwt = require('jsonwebtoken');
+const { sign, verify, refreshVerify } = require('./jwt_utils');
+const setup = require('../db_setup');
 
 const refresh = async (req, res) => {
-  if (req.headers.authorization && req.headers.refresh) {
-    const authToken = req.headers.authorization.split('Bearer ')[1];
-    const refreshTokenFromClient = req.headers.refresh;
+  const refreshToken = req.cookies.refreshToken;
 
-    console.log('Refresh Token:', refreshTokenFromClient);
-    console.log('Access Token:', authToken);
+  if (!refreshToken) {
+    return res.status(401).json({
+      ok: false,
+      message: '리프레시 토큰 제공 안됨',
+    });
+  }
 
-    const authResult = verify(authToken);
-    const decoded = jwt.decode(authToken);
+  try {
+    const { mongodb } = await setup();
+    const tokenDoc = await mongodb.collection("refreshTokens").findOne({ token: refreshToken });
 
-    if (decoded === null) {
-      console.log('decoded가 널값');
+    if (!tokenDoc) {
       return res.status(401).json({
         ok: false,
-        message: 'Not authorized',
+        message: '리프레시 토큰을 찾을 수 없음',
       });
     }
 
-    const refreshResult = await refreshVerify(refreshTokenFromClient, decoded.userid);
+    const refreshResult = await refreshVerify(refreshToken, tokenDoc.userid);
 
-    if (authResult.ok === false) {
-      if (refreshResult === false) {
-        console.log('리프레시토큰 만료');
-        return res.status(401).json({
-          ok: false,
-          message: 'Refresh token is invalid',
-        });
-      } else {
-        const user = { userid: decoded.userid, role: decoded.role };
-        const newAccessToken = sign(user);
-
-        return res.status(200).json({
-          ok: true,
-          data: {
-            accessToken: newAccessToken,
-            refreshToken: refreshTokenFromClient, // 기존 리프레시 토큰 재사용
-          },
-        });
-      }
-    } else {
-      // 액세스 토큰이 아직 유효한 경우
-      return res.status(200).json({
-        ok: true,
-        message: 'Access token is still valid',
-        data: {
-          accessToken: authToken,
-          refreshToken: refreshTokenFromClient,
-        },
+    if (!refreshResult) {
+      return res.status(401).json({
+        ok: false,
+        message: '잘못된 리프레시 토큰',
       });
     }
-  } else {
-    return res.status(400).json({
+
+    const user = await mongodb.collection("user").findOne({ userid: tokenDoc.userid });
+    if (!user) {
+      return res.status(401).json({
+        ok: false,
+        message: '유저 찾을 수 없음',
+      });
+    }
+
+    const newAccessToken = sign({
+      userid: user.userid,
+      role: user.role
+    });
+
+    return res.status(200).json({
+      ok: true,
+      accessToken: newAccessToken,
+    });
+  } catch (error) {
+    console.error('리프레시 토큰 에러:', error);
+    return res.status(500).json({
       ok: false,
-      message: 'Access token and refresh token are required',
+      message: 'Internal server error',
     });
   }
 };
