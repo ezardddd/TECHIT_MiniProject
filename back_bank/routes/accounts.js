@@ -155,6 +155,16 @@ ac.post('/accounts/transfer', authJWT, auth2FA, async(req, res) => {
     const { mysqldb } = await setup();
     
     const { sendAccNumber, receiveAccNumber, amount, accpw } = req.body;
+    
+    // 금액이 0 이하인 경우 거부
+    if (amount <= 0) {
+        return res.status(400).json({ msg: "유효하지 않은 금액입니다." });
+    }
+    
+    // 송금자와 수취자 계좌번호가 같은 경우 거부
+    if (sendAccNumber === receiveAccNumber) {
+        return res.status(400).json({ msg: "자기 자신에게 송금할 수 없습니다." });
+    }
 
     mysqldb.beginTransaction(async (err) => {
         if (err) {
@@ -167,22 +177,28 @@ ac.post('/accounts/transfer', authJWT, auth2FA, async(req, res) => {
             if (senderAccount.length === 0 || senderAccount[0].accpw !== accpw) {
                 throw new Error("계좌 정보가 일치하지 않습니다.");
             }
-
+            
             // 잔액 확인
             if (senderAccount[0].accAmount < amount) {
                 throw new Error("잔액이 부족합니다.");
             }
-
+            
+            // 수취자 계좌 확인
+            const [receiverAccount] = await mysqldb.promise().query('SELECT * FROM Account WHERE accNumber = ?', [receiveAccNumber]);
+            if (receiverAccount.length === 0) {
+                throw new Error("수취자 계좌가 존재하지 않습니다.");
+            }
+            
             // 송금자 계좌 잔액 감소
             await mysqldb.promise().query('UPDATE Account SET accAmount = accAmount - ? WHERE accNumber = ?', [amount, sendAccNumber]);
-
+            
             // 수취자 계좌 잔액 증가
             await mysqldb.promise().query('UPDATE Account SET accAmount = accAmount + ? WHERE accNumber = ?', [amount, receiveAccNumber]);
-
+            
             // 거래 내역 추가
-            await mysqldb.promise().query('INSERT INTO transfers (accid, sendAccNumber, recieveAccNumber, transfertime, transfervalue) VALUES (?, ?, ?, NOW(), ?)', 
+            await mysqldb.promise().query('INSERT INTO transfers (accid, sendAccNumber, recieveAccNumber, transfertime, transfervalue) VALUES (?, ?, ?, NOW(), ?)',
                 [senderAccount[0].accid, sendAccNumber, receiveAccNumber, amount]);
-
+            
             await mysqldb.promise().commit();
             res.json({ msg: "이체 성공" });
         } catch (error) {
