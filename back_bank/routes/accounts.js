@@ -197,32 +197,47 @@ ac.post('/accounts/transfer', authJWT, auth2FA, async(req, res) => {
 
 //게시물에 펀딩하기
 //내 계좌에서 잔고 감소 -> 게시물의 펀딩값에 잔고 증가 -> 거래내역 추가
-ac.post('/accounts/funding', authJWT, async(req, res) => {
+ac.post('/accounts/funding', authJWT, auth2FA, async(req, res) => {
     const { mongodb, mysqldb } = await setup();
-    mysqldb.beginTransaction((err) => {
+    const { postid, sendAccNumber, amount, accpw } = req.body;
+    
+    mysqldb.beginTransaction(async (err) => {
         if (err) {
-          return mysqldb.rollback(() => {
-            throw err;
-          });
+            return res.status(500).json({ msg: "트랜잭션 시작 오류" });
         }
-        mysqldb.query('UPDATE accounts SET accAmount = accAmount - ? where accNumber = ?', [req.body.money, req.body.sendAccNumber], (err, results)=>{
-            if (err) {
-                return mysqldb.rollback(() => {
-                    throw err;
-                });
+
+        try {
+            // 계좌 비밀번호 확인
+            const [senderAccount] = await mysqldb.promise().query('SELECT * FROM Account WHERE accNumber = ? AND userid = ?', [sendAccNumber, req.userid]);
+            if (senderAccount.length === 0 || senderAccount[0].accpw !== accpw) {
+                throw new Error("계좌 정보가 일치하지 않습니다.");
             }
-            // 여기에 펀딩 로직을 추가
-            // 예: 펀딩 게시물의 모금액 증가, 펀딩 내역 저장 등
-            mysqldb.commit((err) => {
-                if (err) {
-                    return mysqldb.rollback(() => {
-                        throw err;
-                    });
-                }
-                console.log('Funding Completed Successfully.');
-                res.json({ msg: "펀딩 성공" });
-            });
-        })
+
+            // 잔액 확인
+            if (senderAccount[0].accAmount < amount) {
+                throw new Error("잔액이 부족합니다.");
+            }
+
+            // 송금자 계좌 잔액 감소
+            await mysqldb.promise().query('UPDATE accounts SET accAmount = accAmount - ? where accNumber = ?', [amount, sendAccNumber]);
+
+            // 게시물 잔액 증가
+            await mysqldb.promise().query('UPDATE posts SET currentAmount = currentAmount + ? WHERE postid = ?', [amount, postid]);
+
+            // 게시물 펀딩인원 카운트 증가
+            await mysqldb.promise().query('UPDATE posts SET investorCount = investorCount + 1 WHERE postid = ?', [postid]);
+
+            let postAccNumber = "Funding-"+postid;
+            // 거래 내역 추가
+            await mysqldb.promise().query('INSERT INTO transfers (accid, sendAccNumber, recieveAccNumber, transfertime, transfervalue) VALUES (?, ?, ?, NOW(), ?)', 
+                [senderAccount[0].accid, sendAccNumber, postAccNumber, amount]);
+
+            await mysqldb.promise().commit();
+            res.json({ msg: "이체 성공" });
+        } catch (error) {
+            await mysqldb.promise().rollback();
+            res.status(400).json({ msg: error.message });
+        }
     })
 })
 
