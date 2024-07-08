@@ -72,8 +72,24 @@ router.post('/funding/create', authJWT, upload.single('image'), async (req, res)
   );
 });
 
+//펀딩을 위한 계정 조회
+//개인의 여러 계정을 조회
+router.get('/funding/:id/getAccounts', authJWT, async(req, res) => {
+  const { mongodb, mysqldb } = await setup();
+  let rows = mysqldb.query('select * from Account where userid = ? and accType = ?',[req.userid, "funding"],(err, rows, fields)=>{
+      if (err){
+          res.status(500).json({ msg: "서버 오류" });
+      }
+      else{
+          console.log(rows); 
+          res.send(rows);
+      }
+  })
+  console.log('getAccounts ok')
+})
+
 // 펀딩하기
-router.post('/funding/:id/invest', authJWT, auth2FA, async (req, res) => {
+router.post('/funding/:id/invest', authJWT,auth2FA, async (req, res) => {
     const { accid, sendAccNumber, amount, twoFactorToken } = req.body;
     const { mysqldb } = await setup();
   
