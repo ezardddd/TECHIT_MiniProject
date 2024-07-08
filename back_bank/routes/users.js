@@ -178,21 +178,34 @@ router.post('/users/logout', async (req, res) => {
 //2fa 설정
 router.post('/users/setup2fa', authJWT, async (req, res) => {
   const { mongodb } = await setup();
-  const secret = speakeasy.generateSecret({ length: 32 });
+  const secret = speakeasy.generateSecret({ 
+    length: 32, // 비밀키를 설정
+    name: `5조 뱅크:${req.userid}`, // 사용자 아이디를 비밀키 이름으로 설정
+    issuer: 'Group 5 Bank',
+    algorithm: 'sha256' // 해시 알고리즘 지정
+  })
 
   try {
     await mongodb.collection("user").updateOne(
       { userid: req.userid },
-      { $set: { twoFactorSecret: secret.base32 } }
+      { $set: { 
+        twoFactorSecret: secret.base32,
+        twoFactorAlgorithm: 'sha256'
+      } }
     );
 
     const otpauth_url = speakeasy.otpauthURL({
-      secret: secret.ascii,
-      label: `YourApp:${req.userid}`,
-      issuer: 'YourApp'
+      secret: secret.ascii,                                 // OTP 인증을 위한 비밀키 (ASCII형식)
+      label: `5조 뱅크:${req.userid}`,
+      issuer: 'Group 5 Bank',
+      algorithm: 'sha256'
     });
 
     qrcode.toDataURL(otpauth_url, (err, data_url) => {
+      if (err) {
+        console.error('QR 코드 생성 오류:', err);
+        return res.status(500).json({ msg: "QR 코드 생성 오류" });
+      }
       res.json({ secret: secret.base32, qr_code: data_url });
     });
   } catch (error) {
@@ -208,16 +221,22 @@ router.post('/users/verify2fa', authJWT, async (req, res) => {
 
   try {
     const user = await mongodb.collection("user").findOne({ userid: req.userid });
+
+    if (!user.twoFactorSecret || !user.twoFactorAlgorithm) {
+      return res.status(400).json({ msg: "2FA가 설정되지 않았습니다." });
+    }
+
     const verified = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: 'base32',
-      token: token
+      token: token,
+      algorithm: user.twoFactorAlgorithm // 저장된 알고리즘 사용
     });
 
     if (verified) {
-      res.json({ msg: "2FA 인증 성공" });
+      res.json({ msg: "2FA 인증 성공", verified: true });
     } else {
-      res.status(400).json({ msg: "2FA 인증 실패" });
+      res.status(400).json({ msg: "2FA 인증 실패", verified: false });
     }
   } catch (error) {
     console.error('2FA 확인 오류:', error);

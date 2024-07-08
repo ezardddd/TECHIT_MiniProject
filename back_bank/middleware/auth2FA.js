@@ -8,14 +8,15 @@ const auth2FA = async (req, res, next) => {
   try {
     const user = await mongodb.collection("user").findOne({ userid: req.userid });
 
-    if (!user.twoFactorSecret) {
+    if (!user.twoFactorSecret || !user.twoFactorAlgorithm) {
       return res.status(400).json({ msg: "2FA가 설정되지 않았습니다." });
     }
 
     const verified = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: 'base32',
-      token: twoFactorToken
+      token: twoFactorToken,
+      algorithm: user.twoFactorAlgorithm // 저장된 알고리즘 사용
     });
 
     if (verified) {
