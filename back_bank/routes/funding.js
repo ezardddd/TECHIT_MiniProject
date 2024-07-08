@@ -130,6 +130,15 @@ router.post('/funding/:id/invest', authJWT,auth2FA, async (req, res) => {
                   else resolve(result);
               }
             );
+
+            mysqldb.query(
+              'insert into investors (userid,postid) VALUES (?, ?)',
+              [req.userid, req.params.id],
+              (err, result) => {
+                  if (err) reject(err);
+                  else resolve(result);
+              }
+            );
           }
         });
 
