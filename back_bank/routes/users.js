@@ -179,11 +179,11 @@ router.post('/users/logout', async (req, res) => {
 router.post('/users/setup2fa', authJWT, async (req, res) => {
   const { mongodb } = await setup();
   const secret = speakeasy.generateSecret({ 
-    length: 32, // 비밀키를 설정
-    name: `5조 뱅크:${req.userid}`, // 사용자 아이디를 비밀키 이름으로 설정
+    length: 32,
+    name: `5조 뱅크:${req.userid}`,
     issuer: 'Group 5 Bank',
-    algorithm: 'sha256' // 해시 알고리즘 지정
-  })
+    algorithm: 'sha256'
+  });
 
   try {
     await mongodb.collection("user").updateOne(
@@ -195,7 +195,7 @@ router.post('/users/setup2fa', authJWT, async (req, res) => {
     );
 
     const otpauth_url = speakeasy.otpauthURL({
-      secret: secret.ascii,                                 // OTP 인증을 위한 비밀키 (ASCII형식)
+      secret: secret.ascii,
       label: `5조 뱅크:${req.userid}`,
       issuer: 'Group 5 Bank',
       algorithm: 'sha256'
@@ -214,7 +214,7 @@ router.post('/users/setup2fa', authJWT, async (req, res) => {
   }
 });
 
-// 2FA 확인
+// 기존 2FA 확인 (재설정 전)
 router.post('/users/verify2fa', authJWT, async (req, res) => {
   const { token } = req.body;
   const { mongodb } = await setup();
@@ -222,15 +222,15 @@ router.post('/users/verify2fa', authJWT, async (req, res) => {
   try {
     const user = await mongodb.collection("user").findOne({ userid: req.userid });
 
-    if (!user.twoFactorSecret || !user.twoFactorAlgorithm) {
-      return res.status(400).json({ msg: "2FA가 설정되지 않았습니다." });
+    if (!user.twoFactorSecret) {
+      return res.status(400).json({ msg: "2FA가 설정되지 않았습니다.", verified: false });
     }
 
     const verified = speakeasy.totp.verify({
       secret: user.twoFactorSecret,
       encoding: 'base32',
       token: token,
-      algorithm: user.twoFactorAlgorithm // 저장된 알고리즘 사용
+      algorithm: 'sha256' // 또는 사용자의 알고리즘
     });
 
     if (verified) {
@@ -240,8 +240,30 @@ router.post('/users/verify2fa', authJWT, async (req, res) => {
     }
   } catch (error) {
     console.error('2FA 확인 오류:', error);
+    res.status(500).json({ msg: "서버 오류", verified: false });
+  }
+});
+
+
+//2FA 상태 확인
+router.get('/users/check2fa', authJWT, async (req, res) => {
+  const { mongodb } = await setup();
+
+  try {
+    const user = await mongodb.collection("user").findOne({ userid: req.userid });
+    
+    if (!user) {
+      return res.status(404).json({ msg: "사용자를 찾을 수 없습니다." });
+    }
+
+    const is2FAEnabled = !!user.twoFactorSecret;
+    res.json({ is2FAEnabled });
+  } catch (error) {
+    console.error('2FA 상태 확인 오류:', error);
     res.status(500).json({ msg: "서버 오류" });
   }
 });
+
+
 
 module.exports = router;
