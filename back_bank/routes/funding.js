@@ -3,22 +3,20 @@ const router = express.Router();
 const setup = require('../db_setup');
 const authJWT = require('../middleware/authJWT');
 const multer = require('multer');
-const path = require('path');
 const auth2FA = require('../middleware/auth2FA');
+const { storage } = require('../firebaseConfig');
+const { ref, uploadBytes, getDownloadURL } = require('firebase/storage');
 
-// 파일 업로드를 위한 multer 설정
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-      cb(null, path.join(__dirname, '..', 'uploads'))
-    },
-    filename: function (req, file, cb) {
-      cb(null, Date.now() + '-' + file.originalname)
+const upload = multer({ storage: multer.memoryStorage() });
+
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.mimetype)) {
+        return cb(new Error('Invalid file type. Only JPEG, PNG, GIF, and WebP are allowed.'), false);
     }
-  });
-const upload = multer({
-    storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 } // 5MB 제한
-  });
+    cb(null, true);
+};
+
 
 // 펀딩 프로젝트 목록 조회
 router.get('/funding/list', async (req, res) => {
@@ -54,25 +52,34 @@ router.get('/funding/:id', async (req, res) => {
         }
       }
     });
-  });
+});
 
 // 새 펀딩 프로젝트 생성
 router.post('/funding/create', authJWT, upload.single('image'), async (req, res) => {
   const { title, content, goal } = req.body;
-  const imageUrl = req.file ? `https://localhost:${process.env.WEB_PORT}/uploads/${req.file.filename}` : null;
   const { mysqldb } = await setup();
 
-  mysqldb.query(
-    'INSERT INTO posts (userid, title, content, goal, currentAmount, investorCount, imageUrl) VALUES (?, ?, ?, ?, 0, 0, ?)',
-    [req.userid, title, content, goal, imageUrl],
-    (err, result) => {
-      if (err) {
-        res.status(500).json({ message: '서버 오류' });
-      } else {
-        res.status(201).json({ message: '프로젝트가 생성되었습니다.', postid: result.insertId });
-      }
+  try {
+    let imageUrl = null;
+    if (req.file) {
+      const fileBuffer = req.file.buffer;
+      const fileName = Date.now() + '-' + req.file.originalname;
+      const storageRef = ref(storage, 'funding_images/' + fileName);
+      
+      await uploadBytes(storageRef, fileBuffer);
+      imageUrl = await getDownloadURL(storageRef);
     }
-  );
+
+    const result = await mysqldb.promise().query(
+      'INSERT INTO posts (userid, title, content, goal, currentAmount, investorCount, imageUrl) VALUES (?, ?, ?, ?, 0, 0, ?)',
+      [req.userid, title, content, goal, imageUrl]
+    );
+
+    res.status(201).json({ message: '프로젝트가 생성되었습니다.', postid: result[0].insertId });
+  } catch (err) {
+    console.error('프로젝트 생성 오류:', err);
+    res.status(500).json({ message: '서버 오류' });
+  }
 });
 
 // 펀딩하기
@@ -112,8 +119,6 @@ router.post('/funding/:id/invest', authJWT, auth2FA, async (req, res) => {
                 [amount, accountNumber]
             );
 
-
-
             // 이미 투자한 사용자인지 확인
             const [existingInvestor] = await mysqldb.promise().query(
                 'SELECT * FROM project_investors WHERE project_id = ? AND user_id = ?',
@@ -144,8 +149,5 @@ router.post('/funding/:id/invest', authJWT, auth2FA, async (req, res) => {
         }
     });
 });
-
-
-
 
 module.exports = router;

@@ -17,6 +17,7 @@ function FundingDetail() {
     try {
       const response = await axios.get(`/funding/${id}`);
       setProject(response.data);
+      console.log('Project data:', response.data); // 디버깅을 위한 로그
     } catch (error) {
       console.error('프로젝트 상세 정보 조회 오류:', error);
     }
@@ -43,7 +44,18 @@ function FundingDetail() {
   return (
     <div className="funding-detail-container">
       <h2>{project.title}</h2>
-      <img src={project.imageUrl} alt={project.title} className="project-image" />
+      {project.imageUrl && (
+        <img 
+          src={project.imageUrl.startsWith('https') ? project.imageUrl : `${axios.defaults.baseURL}${project.imageUrl}`}
+          alt={project.title} 
+          className="project-image"
+          onError={(e) => {
+            console.error('Image load error:', e);
+            e.target.onerror = null; // 무한 루프 방지
+            e.target.src = 'path/to/fallback/image.jpg'; // 대체 이미지 설정
+          }}
+        />
+      )}
       <p>{project.content}</p>
       <div className="funding-progress">
         <progress value={project.currentAmount} max={project.goal}></progress>

@@ -4,7 +4,6 @@ const express = require("express");
 const fs = require('fs');
 const https = require('https');
 const router = express.Router();
-const fundingRoutes = require('./routes/funding');
 const app = express();
 const path = require('path');
 

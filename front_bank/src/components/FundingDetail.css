@@ -17,6 +17,12 @@
   .funding-progress progress {
     width: 100%;
   }
+
+  .project-image {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 20px;
+  }
   
   .funding-progress span {
     display: block;
