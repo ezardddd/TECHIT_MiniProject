@@ -72,8 +72,24 @@ router.post('/funding/create', authJWT, upload.single('image'), async (req, res)
   );
 });
 
+//펀딩을 위한 계정 조회
+//개인의 여러 계정을 조회
+router.get('/funding/:id/getAccounts', authJWT, async(req, res) => {
+  const { mongodb, mysqldb } = await setup();
+  let rows = mysqldb.query('select * from Account where userid = ? and accType = ?',[req.userid, "funding"],(err, rows, fields)=>{
+      if (err){
+          res.status(500).json({ msg: "서버 오류" });
+      }
+      else{
+          console.log(rows); 
+          res.send(rows);
+      }
+  })
+  console.log('getAccounts ok')
+})
+
 // 펀딩하기
-router.post('/funding/:id/invest', authJWT, auth2FA, async (req, res) => {
+router.post('/funding/:id/invest', authJWT,auth2FA, async (req, res) => {
     const { accid, sendAccNumber, amount, twoFactorToken } = req.body;
     const { mysqldb } = await setup();
   
@@ -92,7 +108,7 @@ router.post('/funding/:id/invest', authJWT, auth2FA, async (req, res) => {
         
       //펀딩 거래내역 있는지 확인
         let postReceiveAccNumber = "funding-"+req.params.id;
-        let alreadyInvestor = mysqldb.query('select * from transfers where receiveAccNumber = ? AND sendAccNumber = ?',[postReceiveAccNumber, sendAccNumber]);
+        let alreadyInvestor = mysqldb.query('select * from investors where userid = ? AND postid = ?',[req.userid, req.params.id]);
 
       //거래 내역이 없으면 investorCount 1 추가하면서 금액 추가
         await new Promise((resolve, reject) => {
@@ -109,6 +125,15 @@ router.post('/funding/:id/invest', authJWT, auth2FA, async (req, res) => {
             mysqldb.query(
               'UPDATE posts SET currentAmount = currentAmount + ?, investorCount = investorCount + 1 WHERE postid = ?',
               [amount, req.params.id],
+              (err, result) => {
+                  if (err) reject(err);
+                  else resolve(result);
+              }
+            );
+
+            mysqldb.query(
+              'insert into investors (userid,postid) VALUES (?, ?)',
+              [req.userid, req.params.id],
               (err, result) => {
                   if (err) reject(err);
                   else resolve(result);
