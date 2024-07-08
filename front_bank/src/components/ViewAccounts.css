@@ -1,0 +1,125 @@
+.view-accounts-container {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 20px;
+  font-family: Arial, sans-serif;
+}
+
+.view-accounts-header {
+  text-align: center;
+  color: #333;
+  margin-bottom: 30px;
+}
+
+.no-accounts {
+  text-align: center;
+  margin-top: 50px;
+}
+
+.create-account-link {
+  display: inline-block;
+  background-color: #007bff;
+  color: white;
+  padding: 10px 20px;
+  text-decoration: none;
+  border-radius: 5px;
+  margin-top: 20px;
+}
+
+.create-account-link:hover {
+  background-color: #0056b3;
+}
+
+.accounts-list {
+  list-style-type: none;
+  padding: 0;
+}
+
+.account-item {
+  background-color: #f8f9fa;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 20px;
+  margin-bottom: 20px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.account-info {
+  flex-grow: 1;
+}
+
+.account-number {
+  font-size: 1.2em;
+  font-weight: bold;
+  color: #007bff;
+}
+
+.account-type, .account-balance {
+  margin: 5px 0;
+  color: #555;
+}
+
+.transfer-btn, .transfer-history-btn {
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  margin-left: 10px;
+}
+
+.transfer-btn {
+  background-color: #0059ff;
+}
+
+.transfer-btn:hover {
+  background-color: #0043c7;
+}
+
+.transfer-history-btn {
+  background-color: #28a745;
+}
+
+.transfer-history-btn:hover {
+  background-color: #218838;
+}
+
+.transfer-history-container {
+  margin-top: 30px;
+  background-color: #fff;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 20px;
+}
+
+.transfer-history-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 20px;
+}
+
+.transfer-history-table th, .transfer-history-table td {
+  border: 1px solid #ddd;
+  padding: 12px;
+  text-align: left;
+}
+
+.transfer-history-table th {
+  background-color: #f8f9fa;
+  font-weight: bold;
+}
+
+.transfer-history-table tr:nth-child(even) {
+  background-color: #f8f9fa;
+}
+
+.negative-amount {
+  color: #dc3545;
+}
+
+.positive-amount {
+  color: #28a745;
+}
