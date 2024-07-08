@@ -74,7 +74,7 @@ router.post('/funding/create', authJWT, upload.single('image'), async (req, res)
 
 // 펀딩하기
 router.post('/funding/:id/invest', authJWT, auth2FA, async (req, res) => {
-    const { amount, twoFactorToken } = req.body;
+    const { accid, sendAccNumber, amount, twoFactorToken } = req.body;
     const { mysqldb } = await setup();
   
     if (amount <= 0) {
@@ -82,22 +82,63 @@ router.post('/funding/:id/invest', authJWT, auth2FA, async (req, res) => {
     }
   
     try {
+      //트랜잭션 시작
         await new Promise((resolve, reject) => {
             mysqldb.beginTransaction(err => {
                 if (err) reject(err);
                 else resolve();
             });
         });
+        
+      //펀딩 거래내역 있는지 확인
+        let postReceiveAccNumber = "funding-"+req.params.id;
+        let alreadyInvestor = mysqldb.query('select * from transfers where receiveAccNumber = ? AND sendAccNumber = ?',[postReceiveAccNumber, sendAccNumber]);
 
+      //거래 내역이 없으면 investorCount 1 추가하면서 금액 추가
         await new Promise((resolve, reject) => {
+          if(alreadyInvestor){
             mysqldb.query(
-                'UPDATE posts SET currentAmount = currentAmount + ?, investorCount = investorCount + 1 WHERE postid = ?',
-                [amount, req.params.id],
-                (err, result) => {
-                    if (err) reject(err);
-                    else resolve(result);
-                }
+              'UPDATE posts SET currentAmount = currentAmount + ? WHERE postid = ?',
+              [amount, req.params.id],
+              (err, result) => {
+                  if (err) reject(err);
+                  else resolve(result);
+              }
             );
+          }else{
+            mysqldb.query(
+              'UPDATE posts SET currentAmount = currentAmount + ?, investorCount = investorCount + 1 WHERE postid = ?',
+              [amount, req.params.id],
+              (err, result) => {
+                  if (err) reject(err);
+                  else resolve(result);
+              }
+            );
+          }
+        });
+
+      //송금자 계좌 잔액 감소
+        await new Promise((resolve, reject) => {
+          mysqldb.query(
+            'UPDATE Account SET accAmount = accAmount - ? WHERE accNumber = ?',
+            [amount, sendAccNumber],
+            (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+            }
+          );
+        });
+
+      //거래내역에 등록
+        await new Promise((resolve, reject) => {
+          mysqldb.query(
+            'insert into transfers (accid, sendAccNumber, recieveAccNumber, transfertime, transfervalue) VALUES (?, ?, ?, NOW(), ?)',
+            [accid, sendAccNumber, postReceiveAccNumber, amount],
+            (err, result) => {
+                if (err) reject(err);
+                else resolve(result);
+            }
+          );
         });
 
         await new Promise((resolve, reject) => {
