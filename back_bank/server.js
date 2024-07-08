@@ -6,6 +6,7 @@ const https = require('https');
 const router = express.Router();
 const fundingRoutes = require('./routes/funding');
 const app = express();
+const path = require('path');
 
 const options = {
     key: fs.readFileSync("./server.key"),
@@ -18,6 +19,7 @@ const options = {
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 const cors = require('cors')
 const corsOptions = {

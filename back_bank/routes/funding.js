@@ -8,14 +8,17 @@ const auth2FA = require('../middleware/auth2FA');
 
 // 파일 업로드를 위한 multer 설정
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/')
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname))
-  }
-});
-const upload = multer({ storage: storage });
+    destination: function (req, file, cb) {
+      cb(null, path.join(__dirname, '..', 'uploads'))
+    },
+    filename: function (req, file, cb) {
+      cb(null, Date.now() + '-' + file.originalname)
+    }
+  });
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 } // 5MB 제한
+  });
 
 // 펀딩 프로젝트 목록 조회
 router.get('/funding/list', async (req, res) => {
@@ -56,7 +59,7 @@ router.get('/funding/:id', async (req, res) => {
 // 새 펀딩 프로젝트 생성
 router.post('/funding/create', authJWT, upload.single('image'), async (req, res) => {
   const { title, content, goal } = req.body;
-  const imageUrl = req.file ? `/uploads/${req.file.filename}` : null;
+  const imageUrl = req.file ? `https://localhost:${process.env.WEB_PORT}/uploads/${req.file.filename}` : null;
   const { mysqldb } = await setup();
 
   mysqldb.query(
@@ -110,7 +113,7 @@ router.post('/funding/:id/invest', authJWT, auth2FA, async (req, res) => {
             );
 
 
-            
+
             // 이미 투자한 사용자인지 확인
             const [existingInvestor] = await mysqldb.promise().query(
                 'SELECT * FROM project_investors WHERE project_id = ? AND user_id = ?',
