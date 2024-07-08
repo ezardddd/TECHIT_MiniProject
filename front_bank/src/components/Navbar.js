@@ -79,7 +79,7 @@ function Navbar() {
 
   return (
     <nav className="navbar">
-      <div className="navbar-logo">금융웹</div>
+      <Link to="/" className="navbar-logo">금융웹</Link>
       <ul className="navbar-links">
         <li><Link to="/funding">펀딩</Link></li>
         {isLoggedIn && (

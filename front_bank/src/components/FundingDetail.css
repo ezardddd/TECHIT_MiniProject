@@ -1,0 +1,45 @@
+.funding-detail-container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+  
+  .project-image {
+    max-width: 100%;
+    height: auto;
+    margin-bottom: 20px;
+  }
+  
+  .funding-progress {
+    margin: 20px 0;
+  }
+  
+  .funding-progress progress {
+    width: 100%;
+  }
+  
+  .funding-progress span {
+    display: block;
+    text-align: right;
+    font-size: 0.9em;
+    color: #666;
+  }
+  
+  .funding-form {
+    margin-top: 20px;
+  }
+  
+  .funding-form input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+  
+  .funding-form button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+  }

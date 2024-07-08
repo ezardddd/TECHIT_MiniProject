@@ -4,7 +4,7 @@ const express = require("express");
 const fs = require('fs');
 const https = require('https');
 const router = express.Router();
-
+const fundingRoutes = require('./routes/funding');
 const app = express();
 
 const options = {
@@ -13,8 +13,7 @@ const options = {
 };
 
 
-// app.use('/', require('./routes/posts')); // 펀딩 게시물 관련
-app.use('/', require('./routes/accounts')); // 계좌, 이체 관련
+
 
 
 app.use(express.json());
@@ -32,7 +31,11 @@ app.use(cors(corsOptions))
 app.get('/', (req, res) => {
     res.send('Hello World!');
   });
-app.use('/', require('./routes/users')); //로그인 & 보안-인증 관련
+app.use('/', require('./routes/users')); 
+
+app.use('/', require('./routes/funding'));
+
+app.use('/', require('./routes/accounts')); 
 
 
 https.createServer(options, app).listen(process.env.WEB_PORT, async () => {
