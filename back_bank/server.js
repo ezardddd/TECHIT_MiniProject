@@ -20,7 +20,7 @@ app.use(cookieParser());
 
 const cors = require('cors')
 const corsOptions = {
-  origin: 'https://54.252.180.21:3000',
+  origin: 'https://52.14.71.69:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Refresh'],
   exposedHeaders: ['Authorization'],
