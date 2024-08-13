@@ -20,7 +20,7 @@ app.use(cookieParser());
 
 const cors = require('cors')
 const corsOptions = {
-  origin: 'https://3.14.64.117:3000',
+  origin: process.env.FRONTEND_URL || 'https://3.14.64.117:3000',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'Refresh'],
   exposedHeaders: ['Authorization'],
